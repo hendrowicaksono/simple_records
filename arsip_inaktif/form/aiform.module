@@ -1,0 +1,102 @@
+<?php
+
+function aiform_form_arsip_inaktif_node_form_alter(&$form, &$form_state, $form_id) {
+  global $user;
+  #dpm ($form);
+  if (arg(1) == 'add') {
+    drupal_set_title ('Tambah Arsip');
+
+    if ($user->uid != '1') {
+      #SET FORM FIELDS VISIBILITY
+      $form['field_tanggal_retensi_inaktif']['#access'] = FALSE;
+      $form['field_klas_pasca_inaktif']['#access'] = FALSE;
+    }
+
+  } elseif (arg(2) == 'edit') {
+    drupal_set_title ('Edit Arsip');
+  }
+
+  if ($user->uid != '1') {
+    #SET FORM FIELDS VISIBILITY
+    $form['field_unit_asal_arsip_hs']['#access'] = FALSE;
+
+    # ACCESS LIMITED TO SHOW FORM IF STATUS ARSIP HAS BEEN 0 OR 1
+    if (arg(2) == 'edit') {
+      $_node = node_load(arg(1));
+      #CEK MASIH BISA DIUPDATE ATAU TIDAK
+      if ( isset($_node->field_klas_pasca_inaktif['und']) ) {
+        if ( ($_node->field_klas_pasca_inaktif['und'][0]['value'] == '0') OR ($_node->field_klas_pasca_inaktif['und'][0]['value'] == '1') ) {
+          drupal_set_message('<b>Maaf, data arsip sudah tidak bisa diubah lagi.</b>', 'error');
+          drupal_access_denied();
+          die();
+        }
+      }
+
+      #CEK APAKAH PERLU SHOW STATUS ARSIP DI FORM
+      $_date = $_node->field_tanggal_retensi_inaktif['und'][0]['value'];
+      $retensi = mktime(0, 0, 0, substr($_date, 5, 2), substr($_date, 8, 2), substr($_date, 0, 4)); #unix time of batas retensi
+      $today = time();
+      if ($today > $retensi) {
+        $form['field_klas_pasca_inaktif']['#access'] = TRUE;
+      }
+    }
+  }
+}
+
+function aiform_form_alter(&$form, &$form_state, $form_id) {
+  global $user;
+  if ($user->uid != '1') {
+    if (isset($form['#node']->type)) {
+      if ($form['#node']->type == 'arsip_inaktif') {
+        #gunakan jika ingin mencegah menghapus data arsip jika penanganan
+        #pasca retensi sudah ditentukan
+        #jika status arsip sudah ditentukan, cegah delete
+        #if (isset($form['#node']->field_klas_pasca_inaktif['und'])) {
+        #  if (arg(2) == 'delete') {
+        #    drupal_set_message('Arsip sudah tidak bisa dihapus.', 'error');
+        #    drupal_access_denied();
+        #    die();
+        #  }
+        #}
+        if (arg(2) == 'delete') {
+          $form["description"]["#markup"] = 'Jika sudah dihapus, data tidak dapat dikembalikan.';
+          drupal_set_title('Data arsip ('.$form["#node"]->title.') akan dihapus!');
+        }
+      }
+    }
+  }
+}
+
+function aiform_node_presave($node) {
+  global $user;
+  if ($node->type == 'arsip_inaktif') {
+    # Update field_unit_asal_arsip_hs jika field_unit_asal_arsip_shs didefinisikan
+    if (isset($node->field_unit_asal_arsip_shs['und'][0]['tid'])) {
+      $_trees = taxonomy_get_parents_all($node->field_unit_asal_arsip_shs['und'][0]['tid']);
+      $trees = array_reverse($_trees);
+      foreach ($trees as $k => $tree) {
+        $node->field_unit_asal_arsip_hs['und'][$k]['tid'] = $tree->tid;
+      }
+    }
+    # Update field_tanggal_retensi_inaktif jika status tambah baru
+    if (arg(1) == 'add') {
+      $klasifikasi = node_load($node->field_klasifikasi['und'][0]['target_id']);
+      $_retensi_inaktif = $klasifikasi->field_klas_retensi_inaktif['und'][0]['value'];
+      $_today = date_create($node->field_tanggal_penciptaan['und'][0]['value']);
+      date_add($_today, date_interval_create_from_date_string($_retensi_inaktif.' years'));
+      $node->field_tanggal_retensi_inaktif['und'][0]['value'] = date_format($_today, 'Y-m-d');
+      $node->field_klas_pasca_inaktif['und'][0]['value'] = $klasifikasi->field_klas_pasca_inaktif['und'][0]['value'];
+    } elseif (arg(2) == 'edit') {
+      if ($user->uid != 1) {
+        if (isset($node->original->field_klas_pasca_inaktif['und'])) {
+          if ( ($node->original->field_klas_pasca_inaktif['und'][0]['value'] == '0') OR ($node->original->field_klas_pasca_inaktif['und'][0]['value'] == '1') ) {
+            drupal_set_message('<b>Maaf, data arsip sudah tidak bisa diubah lagi.</b>', 'error');
+            drupal_access_denied();
+            die();
+          }
+        }
+      }
+    }
+  }
+
+}

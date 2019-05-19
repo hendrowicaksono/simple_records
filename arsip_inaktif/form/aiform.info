@@ -1,0 +1,5 @@
+name = Form Inaktif 
+description = Modul kustomisasi form arsip inaktif 
+core = 7.x
+package = Simple Records
+

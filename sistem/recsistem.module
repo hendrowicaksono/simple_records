@@ -1,0 +1,35 @@
+<?php
+
+function recsistem_form_alter(&$form, &$form_state, $form_id) {
+  #drupal_set_message('mari berkarya');
+  #dpm($form['#form_id']);
+
+  global $user, $base_path;
+  if ($user->uid != '1') {
+    if (isset($form['#form_id'])) {
+      #jika klasifikasi sedang digunakan oleh arsip, cegah delete
+      if ($form['#form_id'] == 'user_admin_permissions') {
+        #drupal_set_message('$message', 'error');
+        drupal_access_denied();
+        die();
+      }
+      if ($form['#form_id'] == 'user_admin_roles') {
+        #drupal_set_message('$message', 'error');
+        drupal_access_denied();
+        die();
+      }
+      if ($form['#form_id'] == 'taxonomy_overview_vocabularies') {
+        #drupal_set_message('$message', 'error');
+        drupal_access_denied();
+        die();
+      }
+      if ($form['#form_id'] == 'taxonomy_form_vocabulary') {
+        #drupal_set_message('$message', 'error');
+        drupal_access_denied();
+        die();
+      }
+    }
+  }
+
+}
+

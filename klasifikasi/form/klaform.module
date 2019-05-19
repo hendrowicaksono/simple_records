@@ -1,0 +1,34 @@
+<?php
+
+function klaform_form_alter(&$form, &$form_state, $form_id) {
+  #dpm($form);
+  global $user, $base_path;
+  if ($user->uid != '1') {
+    if (isset($form['#node']->type)) {
+      #jika klasifikasi sedang digunakan oleh arsip, cegah delete
+      if ($form['#node']->type == 'klasifikasi') {
+        if (arg(2) == 'delete') {
+          $active_recs = views_get_view_result('daftar_klasifikasi_yang_masih_aktif_digunakan', 'default', arg(1));
+          #var_dump($active_recs);
+          #echo count($active_recs);
+          $message = NULL;
+          if (count($active_recs) > 0) {
+            $message = 'Maaf, klasifikasi ini tidak bisa dihapus karena sedang digunakan oleh arsip berikut:';
+            $message .= '<ul>';
+            foreach ($active_recs as $k => $v) {
+              $message .= '<li><a href="'.$base_path.'arsip/'.$v->field_klasifikasi_node_nid.'">'.$v->field_klasifikasi_node_title.'</a></li>';
+            }
+            $message .= '</ul>';
+            drupal_set_message($message, 'warning');
+            drupal_access_denied();
+            die();
+          }
+
+        }
+
+      }
+    }
+  }
+
+}
+

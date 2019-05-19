@@ -1,0 +1,4 @@
+name = Form Klasifikasi 
+description = Modul kustomisasi form klasifikasi
+core = 7.x
+package = Simple Records
